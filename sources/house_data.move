@@ -13,6 +13,7 @@ module slots::house_data{
     const ECallerNotHouse: u64 = 0;
     const EInsufficientBalance: u64 = 1;
 
+     // --------------- Objects ---------------
     struct HouseData<phantom T> has key {
         id: UID,
         house_address: address,
