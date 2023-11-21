@@ -6,7 +6,8 @@ module slots::house_data{
     use sui::package::{Self};
     use sui::tx_context::{Self, TxContext};
     use sui::transfer::{Self};
-    use sui::event::emit;
+
+    use slots::events;
 
 
     // Error codes
@@ -27,14 +28,6 @@ module slots::house_data{
         max_stake_amount: u64
     }
 
-    struct HouseDataDeposit<phantom T> has copy, store, drop {
-        amount: u64
-    }
-
-    struct HouseDataWithdraw<phantom T> has copy, store, drop {
-        amount: u64
-    }
-
     struct HouseCap has key {
         id: UID
     }
@@ -52,22 +45,6 @@ module slots::house_data{
         };
 
         transfer::transfer(house_cap, tx_context::sender(ctx));
-    }
-
-    // -------------------- Function -------------------------
-
-    // event emit deposit
-    public(friend) fun emit_house_data_deposit<T>(amount: u64) {
-        emit(HouseDataDeposit<T> {
-            amount,
-        });
-    }
-
-    // event emit withdraw
-    public(friend) fun emit_house_data_withdraw<T>(amount: u64) {
-        emit(HouseDataWithdraw<T>{
-            amount,
-        });
     }
 
     /// Initializer function that should only be called once and by the creator of the contract.
@@ -105,7 +82,7 @@ module slots::house_data{
     public fun top_up<T>(house_data: &mut HouseData<T>, coin: Coin<T>, _: &mut TxContext){
         let coin_value = coin::value(&coin);
         let coin_balance = coin::into_balance(coin);
-        emit_house_data_deposit<T>(coin_value);
+        events::emit_house_data_deposit<T>(coin_value);
         balance::join(&mut house_data.balance, coin_balance);
     }
 
@@ -117,7 +94,7 @@ module slots::house_data{
         assert!(tx_context::sender(ctx)==house_address, ECallerNotHouse);
 
         let total_balance = balance<T>(house_data);
-        emit_house_data_withdraw<T>(total_balance);
+        events::emit_house_data_withdraw<T>(total_balance);
         let coin = coin::take(&mut house_data.balance, total_balance, ctx);
         transfer::public_transfer(coin, house_address);
     }
@@ -147,6 +124,18 @@ module slots::house_data{
         assert!(tx_context::sender(ctx) == house_address<T>(house_data), ECallerNotHouse);
 
         house_data.min_stake_amount = min_stake_amount;
+    }
+
+    public(friend) fun borrow_balanace_mut<T>(house_data: &mut HouseData<T>): &mut Balance<T> {
+        &mut house_data.balance
+    }
+
+    public(friend) fun borrow_fees_mut<T>(house_data: &mut HouseData<T>): &mut Balance<T> {
+        &mut house_data.fees
+    }
+
+    public(friend) fun borrow_mut<T>(house_data: &mut HouseData<T>): &mut UID {
+        &mut house_data.id
     }
 
     
