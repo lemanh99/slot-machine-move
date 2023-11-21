@@ -6,6 +6,8 @@ module slots::slot_game{
     use sui::balance::{Self, Balance};
     use sui::tx_context::{Self, TxContext};
     use sui::coin::{Self, Coin};
+    use sui::bls12381::bls12381_min_pk_verify;
+    use sui::hash::{blake2b256};
     use sui::dynamic_object_field as dof;
 
     use slots::events;
@@ -15,7 +17,9 @@ module slots::slot_game{
 
     const EInvalidStakeAmount: u64 = 0;
     const EInvalidResultNumber: u64 = 1;
-    const EBalanceNotEnough: u64 = 2;
+    const EInvalidBlsSig: u64 = 2;
+    const EBalanceNotEnough: u64 = 3;
+    const EGameDoesNotExist: u64 = 4;
     
     const DEFAULT_MIN_RESULT_ROLL: U64=0;
     const DEFAULT_MAX_RESULT_ROLL: U64=12;
@@ -29,6 +33,7 @@ module slots::slot_game{
         result_roll_one: u64,
         result_roll_two: u64,
         result_roll_three: u64,
+        seed: vector<u8>,
     }
 
     /// Only a house can create games currently to ensure that we cannot be hacked
@@ -36,6 +41,7 @@ module slots::slot_game{
         result_roll_one: u64,
         result_roll_two: u64,
         result_roll_three: u64,
+        seed: vector<u8>,
         house_data: &mut HouseData,
         coin: Coin<T>,
         ctx: &mut TxContext
@@ -45,6 +51,7 @@ module slots::slot_game{
             result_roll_one,
             result_roll_two,
             result_roll_three,
+            seed,
             house_data,
             coin,
             ctx
@@ -56,6 +63,7 @@ module slots::slot_game{
         result_roll_one: u64,
         result_roll_two: u64,
         result_roll_three: u64,
+        seed: vector<u8>,
         house_data: &mut HouseData<T>,
         coin: Coin<T>,
         ctx: &mut TxContext
@@ -86,6 +94,7 @@ module slots::slot_game{
             result_roll_one,
             result_roll_two,
             result_roll_three,
+            seed
         };
 
         let game_id = object::uid_to_inner(&game_uid);
@@ -99,6 +108,44 @@ module slots::slot_game{
         );
         dof::add(&mut house_data.id, game_id, game);
         game_id //return game id
+    }
+
+    public fun finish_game<T>(
+        game_id: ID, 
+        house_data: &mut HouseData<T>, 
+        bls_sig: vector<u8>, 
+        ctx: &mut TxContext
+    ){
+        assert!(game_exists(house_data, game_id), EGameDoesNotExist);
+
+        let SlotGame {
+            id,
+            player,
+            total_stake,
+            result_roll_one,
+            result_roll_two,
+            result_roll_three,
+            seed
+        } = dof::remove<ID, SlotGame<T>>(&mut house_data.id, game_id);
+        
+        let msg_vec = object::uid_to_bytes(&id);
+        vector::append(&mut msg_vec, seed);
+        let public_key = hd::public_key<T>(house_data);
+
+        // Step 1: Check the BLS signature, if its invalid abort.
+        let is_sig_valid = bls12381_min_pk_verify(&bls_sig, &public_key, &msg_vec);
+        assert!(is_sig_valid, EInvalidBlsSig);
+        object::delete(id);
+
+        //  Hash the beacon before taking the 1st byte.
+        let hashed_beacon = blake2b256(&bls_sig);
+        let first_byte = *vector::borrow(&hashed_beacon, 0);
+    }
+    
+    
+
+    fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
+        dof::exists_with_type<ID, SlotGame<T>>(&house_data.id, game_id)
     }
 
     fun map_result_roll(result_roll: u64){
