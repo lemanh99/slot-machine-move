@@ -11,18 +11,15 @@ module slots::slot_game{
     use sui::dynamic_object_field as dof;
 
     use slots::events;
+    use slots::roll;
     use slots::house_data::{Self as hd, HouseData};
     // --------------- Contant ---------------
     // Error code
 
     const EInvalidStakeAmount: u64 = 0;
-    const EInvalidResultNumber: u64 = 1;
     const EInvalidBlsSig: u64 = 2;
     const EBalanceNotEnough: u64 = 3;
     const EGameDoesNotExist: u64 = 4;
-    
-    const DEFAULT_MIN_RESULT_ROLL: U64=0;
-    const DEFAULT_MAX_RESULT_ROLL: U64=12;
 
     // --------------- Objects ---------------
 
@@ -68,9 +65,7 @@ module slots::slot_game{
         coin: Coin<T>,
         ctx: &mut TxContext
     ): ID {
-        map_result_roll(result_roll_one);
-        map_result_roll(result_roll_two);
-        map_result_roll(result_roll_three);
+        roll::validate_roll_players<T>(result_roll_one, result_roll_two, result_roll_three);
         let user_stake_amount = coin::value(&coin);
         assert!(
             user_stake_amount>= hd::min_stake_amount<T>(house_data) && user_stake_amount>= hd::max_stake_amount<T>(house_data),
@@ -138,17 +133,18 @@ module slots::slot_game{
         object::delete(id);
 
         //  Hash the beacon before taking the 1st byte.
+        let (is_player_win, multiple_number) = roll::roll_player(
+            result_roll_one,
+            result_roll_two,
+            result_roll_three
+        );
         let hashed_beacon = blake2b256(&bls_sig);
         let first_byte = *vector::borrow(&hashed_beacon, 0);
+        let player_won: bool = (is_player_win == first_byte % 2);
+
     }
     
-    
-
     fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
         dof::exists_with_type<ID, SlotGame<T>>(&house_data.id, game_id)
-    }
-
-    fun map_result_roll(result_roll: u64){
-        assert!(result_roll >= DEFAULT_MIN_RESULT_ROLL && result_roll <= DEFAULT_MAX_RESULT_ROLL, EInvalidResultNumber)
     }
 }
