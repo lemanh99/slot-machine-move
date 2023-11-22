@@ -61,4 +61,14 @@ module slots::events {
             result_roll_three
         })
     }
+
+    struct FeeCollection<phantom T> has copy, store, drop{
+        amount: u64
+    }
+
+    public(friend) fun emit_fee_collection<T>(amount: u64){
+        emit(FeeCollection<T>{
+            amount
+        })
+    }
 }

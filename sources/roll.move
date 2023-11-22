@@ -9,7 +9,7 @@ module slots::roll{
     const DEFAULT_ROLL_NUMBER_QUEEN: u64=0;
     
     const PLAYER_LOSE: u64=0;
-    const PLAYER_WIN: u64=1;
+    const PLAYER_WON: u64=1;
     
     const MULTIPLIER_ZERO: u64=0;
     const MULTIPLIER_ONE: u64=1;
@@ -42,31 +42,31 @@ module slots::roll{
         validate_roll_players(result_roll_one, result_roll_two, result_roll_three);
 
         if(result_roll_one == result_roll_two && result_roll_three==DEFAULT_ROLL_NUMBER_QUEEN){
-            return (PLAYER_WIN, MULTIPLIER_ONE)
+            return (PLAYER_WON, MULTIPLIER_ONE)
         };
 
         if(result_roll_one == result_roll_three && result_roll_two==DEFAULT_ROLL_NUMBER_QUEEN){
-            return (PLAYER_WIN, MULTIPLIER_ONE)
+            return (PLAYER_WON, MULTIPLIER_ONE)
         };
 
         if(result_roll_two == result_roll_three && result_roll_one==DEFAULT_ROLL_NUMBER_QUEEN){
-            return (PLAYER_WIN, MULTIPLIER_ONE)
+            return (PLAYER_WON, MULTIPLIER_ONE)
         };
 
         if(result_roll_two == result_roll_three && result_roll_one==DEFAULT_ROLL_NUMBER_QUEEN){
-            return (PLAYER_WIN, MULTIPLIER_ONE)
+            return (PLAYER_WON, MULTIPLIER_ONE)
         };
 
         if(result_roll_one == result_roll_two && result_roll_one==result_roll_three && result_roll_one==NUMBER_THREE){
-            return (PLAYER_WIN, MULTIPLIER_THREE)
+            return (PLAYER_WON, MULTIPLIER_THREE)
         };
 
         if(result_roll_one == result_roll_two && result_roll_one==result_roll_three && result_roll_one==NUMBER_FIVE){
-            return (PLAYER_WIN, MULTIPLIER_FIVE)
+            return (PLAYER_WON, MULTIPLIER_FIVE)
         };
 
         if(result_roll_one == result_roll_two && result_roll_one==result_roll_three && result_roll_one==NUMBER_EIGHT){
-            return (PLAYER_WIN, MULTIPLIER_EIGHT)
+            return (PLAYER_WON, MULTIPLIER_EIGHT)
         };
 
         return (PLAYER_LOSE, MULTIPLIER_ZERO)
