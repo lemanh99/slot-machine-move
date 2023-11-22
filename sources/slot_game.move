@@ -31,6 +31,7 @@ module slots::slot_game{
         id: UID,
         player: address,
         total_stake: Balance<T>,
+        fee_rate: u128,
         result_roll_one: u64,
         result_roll_two: u64,
         result_roll_three: u64,
@@ -90,6 +91,7 @@ module slots::slot_game{
             id: game_uid,
             player,
             total_stake: house_stake,
+            fee_rate: house_data.fee_rate,
             result_roll_one,
             result_roll_two,
             result_roll_three,
@@ -124,6 +126,7 @@ module slots::slot_game{
             result_roll_one,
             result_roll_two,
             result_roll_three,
+            fee_rate,
             seed
         } = dof::remove<ID, SlotGame<T>>(&mut house_data.id, game_id);
         
@@ -145,6 +148,15 @@ module slots::slot_game{
         let hashed_beacon = blake2b256(&bls_sig);
         let first_byte = *vector::borrow(&hashed_beacon, 0);
         let player_won: bool = (is_player_won == first_byte % 2);
+
+        reward_distribution<T>(
+            house_data,
+            player_won,
+            fee_rate,
+            total_stake,
+            player,
+            ctx
+        )
     }
 
     fun reward_distribution<T>(
@@ -152,6 +164,7 @@ module slots::slot_game{
         is_player_won: bool, 
         fee_rate: u64,
         total_stake: Balance<T>, 
+        player: address,
         ctx: &mut TxContext
     ){
         let stake_amount = balance::value(&total_stake);
@@ -160,7 +173,12 @@ module slots::slot_game{
             let fee_amount = fee_amount(stake_amount, fee_rate);
             let fees = balance::split(&mut total_stake, fee_amount);
 
-            events::emit_fee_collection(fees)
+            events::emit_fee_collection(fees);
+            balance::join(&mut house_data.fees, fees);
+            let reward = coin::from_balance(total_stake, ctx);
+            transfer::public_transfer(reward, player);
+        }else{
+            balance::join(&mut house_data.balance, stake_amount);
         }
     }
 
