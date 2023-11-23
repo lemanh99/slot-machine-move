@@ -1,7 +1,6 @@
 module slots::house_data{
     use sui::object::{Self, UID};
     use sui::balance::{Self, Balance};
-    use sui::sui::SUI;
     use sui::coin::{Self, Coin};
     use sui::package::{Self};
     use sui::tx_context::{Self, TxContext};
@@ -111,17 +110,17 @@ module slots::house_data{
     }
 
     /// House can update the max stake. This allows larger stake to be placed.
-    public fun update_max_stake_amount<T>(house_data: &mut HouseData<T>, max_stake_amount: u64, ctx: &mut TxContext) {
+    public fun update_max_stake_amount<T>(house_data: &mut HouseData<T>, max_stake_amount: u64, _ctx: &mut TxContext) {
         // Only the house address can update the base fee.
-        assert!(tx_context::sender(ctx) == house_address<T>(house_data), ECallerNotHouse);
+        assert!(tx_context::sender(_ctx) == house_address<T>(house_data), ECallerNotHouse);
 
         house_data.max_stake_amount = max_stake_amount;
     }
 
     /// House can update the min stake. This allows smaller stake to be placed.
-    public fun update_min_stake_amount<T>(house_data: &mut HouseData<T>, min_stake_amount: u64, ctx: &mut TxContext) {
+    public fun update_min_stake_amount<T>(house_data: &mut HouseData<T>, min_stake_amount: u64, _ctx: &mut TxContext) {
         // Only the house address can update the min stake.
-        assert!(tx_context::sender(ctx) == house_address<T>(house_data), ECallerNotHouse);
+        assert!(tx_context::sender(_ctx) == house_address<T>(house_data), ECallerNotHouse);
 
         house_data.min_stake_amount = min_stake_amount;
     }
@@ -165,5 +164,10 @@ module slots::house_data{
 
     public fun max_stake_amount<T>(house_data: &HouseData<T>): u64 {
         house_data.max_stake_amount
+    }
+
+    #[test_only]
+    public fun init_for_testing(ctx: &mut TxContext){
+        init(HOUSE_DATA {}, ctx);
     }
 }

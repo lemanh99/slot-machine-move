@@ -8,12 +8,12 @@ module slots::roll{
 
     const DEFAULT_ROLL_NUMBER_QUEEN: u64=0;
     
-    const PLAYER_LOSE: u64=0;
-    const PLAYER_WON: u64=1;
+    const PLAYER_LOSE: u8=0;
+    const PLAYER_WON: u8=1;
     
     const MULTIPLIER_ZERO: u64=0;
     const MULTIPLIER_ONE: u64=1;
-    const MULTIPLIER_TWO: u64=2;
+    // const MULTIPLIER_TWO: u64=2;
     const MULTIPLIER_THREE: u64=3;
     const MULTIPLIER_FIVE: u64=5;
     const MULTIPLIER_EIGHT: u64=8;
@@ -38,7 +38,7 @@ module slots::roll{
         result_roll_one: u64,
         result_roll_two: u64,
         result_roll_three: u64
-    ): (u64, u64) {
+    ): (u8, u64) {
         validate_roll_players(result_roll_one, result_roll_two, result_roll_three);
 
         if(result_roll_one == result_roll_two && result_roll_three==DEFAULT_ROLL_NUMBER_QUEEN){

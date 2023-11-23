@@ -9,6 +9,7 @@ module slots::slot_game{
     use sui::bls12381::bls12381_min_pk_verify;
     use sui::hash::{blake2b256};
     use sui::dynamic_object_field as dof;
+    use sui::transfer::{Self};
 
     use slots::events;
     use slots::roll;
@@ -20,6 +21,7 @@ module slots::slot_game{
     const EInvalidBlsSig: u64 = 2;
     const EBalanceNotEnough: u64 = 3;
     const EGameDoesNotExist: u64 = 4;
+    const EPoolNotEnough: u64 = 5;
 
     // -----------
     const GAME_RETURN: u8 = 2;
@@ -44,7 +46,7 @@ module slots::slot_game{
         result_roll_two: u64,
         result_roll_three: u64,
         seed: vector<u8>,
-        house_data: &mut HouseData,
+        house_data: &mut HouseData<T>,
         coin: Coin<T>,
         ctx: &mut TxContext
     ): ID {
@@ -70,18 +72,18 @@ module slots::slot_game{
         coin: Coin<T>,
         ctx: &mut TxContext
     ): ID {
-        roll::validate_roll_players<T>(result_roll_one, result_roll_two, result_roll_three);
+        roll::validate_roll_players(result_roll_one, result_roll_two, result_roll_three);
         let user_stake_amount = coin::value(&coin);
         assert!(
             user_stake_amount>= hd::min_stake_amount<T>(house_data) && user_stake_amount>= hd::max_stake_amount<T>(house_data),
             EInvalidStakeAmount
         );
 
-        let user_balance_stake = coin::into_balance(user_stake_amount);
-        assert!(hd::balance(house_data) >= user_balance_stake, EPoolNotEnough);
+        assert!(hd::balance(house_data) >= user_stake_amount, EPoolNotEnough);
         
         // Fund of house
-        let house_stake = balance::split(&mut house_data.balance, user_stake_amount);
+        let user_balance_stake = coin::into_balance(coin);
+        let house_stake = balance::split(hd::borrow_balanace_mut<T>(house_data), user_stake_amount);
         balance::join(&mut user_balance_stake, house_stake);
 
         let game_uid = object::new(ctx);
@@ -91,7 +93,7 @@ module slots::slot_game{
             id: game_uid,
             player,
             total_stake: house_stake,
-            fee_rate: house_data.fee_rate,
+            fee_rate: hd::fee_rate<T>(house_data),
             result_roll_one,
             result_roll_two,
             result_roll_three,
@@ -107,7 +109,7 @@ module slots::slot_game{
             result_roll_two,
             result_roll_three
         );
-        dof::add(&mut house_data.id, game_id, game);
+        dof::add(hd::borrow_mut<T>(house_data), game_id, game);
         game_id //return game id
     }
 
@@ -128,7 +130,7 @@ module slots::slot_game{
             result_roll_three,
             fee_rate,
             seed
-        } = dof::remove<ID, SlotGame<T>>(&mut house_data.id, game_id);
+        } = dof::remove<ID, SlotGame<T>>(hd::borrow_mut<T>(house_data), game_id);
         
         let msg_vec = object::uid_to_bytes(&id);
         vector::append(&mut msg_vec, seed);
@@ -149,44 +151,44 @@ module slots::slot_game{
         let first_byte = *vector::borrow(&hashed_beacon, 0);
         let player_won: bool = (is_player_won == first_byte % 2);
 
-        reward_distribution<T>(
-            house_data,
-            player_won,
-            fee_rate,
-            total_stake,
-            player,
-            ctx
-        )
+        // reward_distribution<T>(
+        //     house_data,
+        //     player_won,
+        //     fee_rate,
+        //     total_stake,
+        //     player,
+        //     ctx
+        // )
     }
 
-    fun reward_distribution<T>(
-        house_data: &HouseData, 
-        is_player_won: bool, 
-        fee_rate: u64,
-        total_stake: Balance<T>, 
-        player: address,
-        ctx: &mut TxContext
-    ){
-        let stake_amount = balance::value(&total_stake);
+    // fun reward_distribution<T>(
+    //     house_data: &HouseData<T>, 
+    //     is_player_won: bool, 
+    //     fee_rate: u64,
+    //     total_stake: Balance<T>, 
+    //     player: address,
+    //     ctx: &mut TxContext
+    // ){
+    //     let stake_amount = balance::value(&total_stake);
 
-        if(is_player_won){
-            let fee_amount = fee_amount(stake_amount, fee_rate);
-            let fees = balance::split(&mut total_stake, fee_amount);
+    //     if(is_player_won){
+    //         let fee_amount = fee_amount(stake_amount, fee_rate);
+    //         let fees = balance::split(&mut total_stake, fee_amount);
 
-            events::emit_fee_collection(fees);
-            balance::join(&mut house_data.fees, fees);
-            let reward = coin::from_balance(total_stake, ctx);
-            transfer::public_transfer(reward, player);
-        }else{
-            balance::join(&mut house_data.balance, stake_amount);
-        }
+    //         // events::emit_fee_collection(&fee_amount);
+    //         // balance::join(hd::borrow_fees_mut(), fees);
+    //         // let reward = coin::from_balance(total_stake, ctx);
+    //         // transfer::public_transfer(reward, player);
+    //     }else{
+    //         balance::join(hd::borrow_balanace_mut(house_data), stake_amount);
+    //     }
+    // }
+    
+    fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
+        dof::exists_with_type<ID, SlotGame<T>>(hd::borrow_mut(house_data), game_id)
     }
 
     fun fee_amount(stake_amount: u64, fee_rate: u64): u64{
-        return (((stake_amount/(GAME_RETURN as u64)) as u128) * ((fee_rate as u64)/(FEE_PRECISION as u64)) as u64)
-    }
-    
-    fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
-        dof::exists_with_type<ID, SlotGame<T>>(&house_data.id, game_id)
+        return (((stake_amount/(GAME_RETURN as u64)) as u64) * ((fee_rate as u64)/(FEE_PRECISION as u64)) as u64)
     }
 }

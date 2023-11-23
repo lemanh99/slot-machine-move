@@ -1,11 +1,8 @@
 module slots::events {
-    use std::vector;
-    use std::option::{Self, Option};
-    use std::string::String;
-    use sui::object::{Self, UID, ID};
-    use sui::balance::{Self, Balance};
-    use sui::tx_context::{Self, TxContext};
-    use sui::coin::{Self, Coin};
+    // use std::option::{Self, Option};
+    // use std::string::String;
+    use sui::object::{ ID };
+    // use sui::tx_context::{TxContext};
     use sui::event::emit;
 
     friend slots::house_data;
