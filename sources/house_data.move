@@ -22,7 +22,7 @@ module slots::house_data{
         public_key: vector<u8>,
         balance: Balance<T>,
         fees: Balance<T>,
-        fee_rate: u128,
+        fee_rate: u64,
         min_stake_amount: u64,
         max_stake_amount: u64
     }
@@ -125,45 +125,45 @@ module slots::house_data{
         house_data.min_stake_amount = min_stake_amount;
     }
 
-    public(friend) fun borrow_balanace_mut<T>(house_data: &mut HouseData<T>): &mut Balance<T> {
-        &mut house_data.balance
+    public(friend) fun borrow_balance_mut<T>(house_data: &mut HouseData<T>): &mut Balance<T> {
+        return &mut house_data.balance
     }
 
     public(friend) fun borrow_fees_mut<T>(house_data: &mut HouseData<T>): &mut Balance<T> {
-        &mut house_data.fees
+        return &mut house_data.fees
     }
 
     public(friend) fun borrow_mut<T>(house_data: &mut HouseData<T>): &mut UID {
-        &mut house_data.id
+        return &mut house_data.id
     }
 
     
     public fun house_address<T>(house_data: &HouseData<T>): address {
-        house_data.house_address
+        return house_data.house_address
     }
     
     public fun public_key<T>(house_data: &HouseData<T>): vector<u8> {
-        house_data.public_key
+        return house_data.public_key
     }
 
     public fun balance<T>(house_data: &HouseData<T>): u64 {
-        balance::value(&house_data.balance)
+        return balance::value(&house_data.balance)
     }
     
     public fun fees<T>(house_data: &HouseData<T>): u64 {
-        balance::value(&house_data.fees)
+        return balance::value(&house_data.fees)
     }
 
-    public fun fee_rate<T>(house_data: &HouseData<T>): u128 {
-        house_data.fee_rate
+    public fun fee_rate<T>(house_data: &HouseData<T>): u64 {
+        return house_data.fee_rate
     }
 
     public fun min_stake_amount<T>(house_data: &HouseData<T>): u64 {
-        house_data.min_stake_amount
+        return house_data.min_stake_amount
     }
 
     public fun max_stake_amount<T>(house_data: &HouseData<T>): u64 {
-        house_data.max_stake_amount
+        return house_data.max_stake_amount
     }
 
     #[test_only]
