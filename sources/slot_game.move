@@ -186,6 +186,10 @@ module slots::slot_game{
         }
     }
     
+    public fun borrow_game<T>(game_id: ID, house_data: &HouseData<T>): &SlotGame{
+        
+    }
+    
     fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
         dof::exists_with_type<ID, SlotGame<T>>(hd::borrow_mut<T>(house_data), game_id)
     }

@@ -1,17 +1,25 @@
 #[test_only]
 module slots::test_common{
     // use std::string::{Self};
+    use sui::address;
 
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
-    // use sui::transfer;
+    use sui::transfer;
     use sui::test_scenario::{Self as tsc, Scenario};
-    // use sui::object::ID;
+    use sui::object::ID;
+    use sui::test_random::{Self, Random};
 
-    use slots::house_data::{Self as hd, HouseCap};
+    use slots::house_data::{Self as hd, HouseCap, HouseData};
+    use slots::slot_game::{Self as sg};
+
+    const MIN_STAKE: u64 = 1_000_000_000; // 1 SUI
+    // const MAX_STAKE: u64 = 50_000_000_000; // 50 SUI
 
     const INITIAL_HOUSE_BALANCE: u64 = 5_000_000_000; // 1 SUI
     // const INITIAL_PLAYER_BALANCE: u64 = 3_000_000_000; // 3 SUI
+
+    const ROLL_NUMBER_ONE: u64 = 1;
 
         // House's public key.
     const PUBLIC_KEY: vector<u8> = vector<u8> [
@@ -25,6 +33,10 @@ module slots::test_common{
 
     public fun get_initial_house_balance(): u64 {
         return INITIAL_HOUSE_BALANCE
+    }
+
+    public fun get_min_stake(): u64 {
+        MIN_STAKE
     }
 
     public fun init_house(scenario: &mut Scenario, owner: address, valid_coin: bool){
@@ -61,5 +73,51 @@ module slots::test_common{
                 )
             }
         }
+    }
+
+    public fun fund_addresses(
+        scenario: &mut Scenario, 
+        house: address, 
+        player: address, 
+        house_funds: u64,
+        player_funds: u64
+    ){
+        let ctx = tsc::ctx(scenario);
+        let coinA = coin::mint_for_testing<SUI>(house_funds, ctx);
+        let coinB = coin::mint_for_testing<SUI>(player_funds, ctx);
+        transfer::public_transfer(coinA, house);
+        transfer::public_transfer(coinB, player);
+    }
+
+    public fun create_game(
+        scenario: &mut Scenario,
+        player: address,
+        stake: u64
+    ): ID {
+        tsc::next_tx(scenario, player);
+        let player_coin = tsc::take_from_sender<Coin<SUI>>(scenario);
+        let house_data = tsc::take_shared<HouseData<SUI>>(scenario);
+        let ctx = tsc::ctx(scenario);
+        let stake_coin = coin::split(&mut player_coin, stake, ctx);
+        let seed = address::to_bytes(player);
+
+        let game_id = sg::new_game<SUI>(
+            ROLL_NUMBER_ONE,
+            ROLL_NUMBER_ONE,
+            ROLL_NUMBER_ONE,
+            seed,
+            &mut house_data,
+            stake_coin,
+            ctx
+        );
+        tsc::return_shared(house_data);
+        tsc::return_to_sender(scenario, player_coin);
+        return game_id
+    }
+
+    public fun game_fees(scenario: &mut Scenario, game_id: ID, owner: address): u64 {
+        tsc::next_tx(scenario, owner);
+        let house_data = tsc::take_shared<HouseData<T>>(scenario);
+        // let game = sg::
     }
 }

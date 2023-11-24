@@ -49,4 +49,21 @@ module slots::test_house_data {
 
         tsc::end(scenario_val);
     }
+
+    #[test]
+    fun house_withdraws_fees(){
+        let owner = @0xCAFE;
+        let player = @0xDECAf;
+
+        let scenario_val = tsc::begin(owner);
+        let scenario = &mut scenario_val;
+        {
+            tc::fund_addresses(scenario, owner, player, tc::get_initial_house_balance(), tc::get_initial_house_balance());
+        };
+        tc::init_house(scenario, owner, true);
+        let game_id = tc::create_new_game(scenario, player, tc::get_min_stake());
+
+        let game_fee = 
+        
+    }
 }
