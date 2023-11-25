@@ -1,5 +1,6 @@
 #[test_only]
 module slots::test_house_data {
+    use std::debug;
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
     use sui::transfer;
@@ -58,10 +59,10 @@ module slots::test_house_data {
         let scenario_val = tsc::begin(owner);
         let scenario = &mut scenario_val;
         {
-            tc::fund_addresses(scenario, owner, player, tc::get_initial_house_balance(), tc::get_initial_house_balance());
+            tc::fund_addresses(scenario, owner, player, tc::get_initial_house_balance(), tc::get_initial_player_balance());
         };
         tc::init_house(scenario, owner, true);
-        let game_id = tc::create_game(scenario, player, tc::get_min_stake());
+        let game_id = tc::create_game(scenario, player, tc::get_min_stake(), true);
         let game_fees = tc::game_fees(scenario, game_id, owner);
 
         tc::end_game(scenario, game_id, owner, player, true);

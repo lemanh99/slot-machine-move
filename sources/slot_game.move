@@ -88,6 +88,7 @@ module slots::slot_game{
         
         // Fund of house
         let user_balance_stake = coin::into_balance(coin);
+        
         let house_stake = balance::split(hd::borrow_balance_mut<T>(house_data), user_stake_amount);
         balance::join(&mut user_balance_stake, house_stake);
 
@@ -161,7 +162,6 @@ module slots::slot_game{
         let hashed_beacon = blake2b256(&bls_sig);
         let first_byte = *vector::borrow(&hashed_beacon, 0);
         let player_won: bool = (is_player_won == first_byte % 2);
-
         reward_distribution<T>(
             house_data,
             player_won,
@@ -186,7 +186,6 @@ module slots::slot_game{
         if(is_player_won){
             let fee_amount = fee_amount(stake_amount, fee_rate);
             let fees = balance::split(&mut total_stake, fee_amount);
-
             events::emit_fee_collection<T>(fee_amount);
             balance::join(hd::borrow_fees_mut<T>(house_data), fees);
             let reward = coin::from_balance(total_stake, ctx);

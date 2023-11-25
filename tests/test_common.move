@@ -1,6 +1,7 @@
 #[test_only]
 module slots::test_common{
     // use std::string::{Self};
+    use std::debug;
     use sui::address;
 
     use sui::coin::{Self, Coin};
@@ -17,9 +18,12 @@ module slots::test_common{
     // const MAX_STAKE: u64 = 50_000_000_000; // 50 SUI
 
     const INITIAL_HOUSE_BALANCE: u64 = 5_000_000_000; // 1 SUI
-    // const INITIAL_PLAYER_BALANCE: u64 = 3_000_000_000; // 3 SUI
+    const INITIAL_PLAYER_BALANCE: u64 = 3_000_000_000; // 3 SUI
 
+    const ROLL_NUMBER_ZERO: u64 = 0;
     const ROLL_NUMBER_ONE: u64 = 1;
+    const ROLL_NUMBER_TWO: u64 = 2;
+    const ROLL_NUMBER_THREE: u64 = 3;
 
     // House's public key.
     const PUBLIC_KEY: vector<u8> = vector<u8> [
@@ -44,6 +48,10 @@ module slots::test_common{
 
     public fun get_initial_house_balance(): u64 {
         return INITIAL_HOUSE_BALANCE
+    }
+
+    public fun get_initial_player_balance(): u64 {
+        INITIAL_PLAYER_BALANCE
     }
 
     public fun get_min_stake(): u64 {
@@ -103,7 +111,8 @@ module slots::test_common{
     public fun create_game(
         scenario: &mut Scenario,
         player: address,
-        stake: u64
+        stake: u64,
+        player_won: bool,
     ): ID {
         tsc::next_tx(scenario, player);
         let player_coin = tsc::take_from_sender<Coin<SUI>>(scenario);
@@ -112,10 +121,14 @@ module slots::test_common{
         let stake_coin = coin::split(&mut player_coin, stake, ctx);
         let seed = address::to_bytes(player);
 
+        let result_roll_one = if (player_won){ROLL_NUMBER_ZERO} else {ROLL_NUMBER_ONE};
+        let result_roll_two = if (player_won){ROLL_NUMBER_ONE} else {ROLL_NUMBER_TWO};
+        let result_roll_three = if (player_won){ROLL_NUMBER_ONE} else {ROLL_NUMBER_THREE};
+
         let game_id = sg::new_game<SUI>(
-            ROLL_NUMBER_ONE,
-            ROLL_NUMBER_ONE,
-            ROLL_NUMBER_ONE,
+            result_roll_one,
+            result_roll_two,
+            result_roll_three,
             seed,
             &mut house_data,
             stake_coin,
