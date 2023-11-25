@@ -61,9 +61,25 @@ module slots::test_house_data {
             tc::fund_addresses(scenario, owner, player, tc::get_initial_house_balance(), tc::get_initial_house_balance());
         };
         tc::init_house(scenario, owner, true);
-        let game_id = tc::create_new_game(scenario, player, tc::get_min_stake());
+        let game_id = tc::create_game(scenario, player, tc::get_min_stake());
+        let game_fees = tc::game_fees(scenario, game_id, owner);
 
-        let game_fee = 
-        
+        tc::end_game(scenario, game_id, owner, player, true);
+
+        tsc::next_tx(scenario, owner);
+        {
+            let house_data = tsc::take_shared<HouseData<SUI>>(scenario);
+            let ctx = tsc::ctx(scenario);
+            hd::claim_fees(&mut house_data, ctx);
+            tsc::return_shared(house_data);
+        };
+
+        tsc::next_tx(scenario, owner);
+        {
+            let withdraw_coin = tsc::take_from_sender<Coin<SUI>>(scenario);
+            assert!(coin::value(&withdraw_coin) == game_fees, EWrongWithdrawAmount);
+            tsc::return_to_sender(scenario, withdraw_coin);
+        };
+        tsc::end(scenario_val);
     }
 }

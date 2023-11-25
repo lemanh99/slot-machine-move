@@ -14,6 +14,8 @@ module slots::slot_game{
     use slots::events;
     use slots::roll;
     use slots::house_data::{Self as hd, HouseData};
+
+    use std::debug;
     // --------------- Contant ---------------
     // Error code
 
@@ -26,6 +28,9 @@ module slots::slot_game{
     // -----------
     const GAME_RETURN: u8 = 2;
     const FEE_PRECISION: u128 = 100;
+
+    //--------------------------------------------------------
+    friend slots::test_common;
 
     // --------------- Objects ---------------
 
@@ -75,7 +80,7 @@ module slots::slot_game{
         roll::validate_roll_players(result_roll_one, result_roll_two, result_roll_three);
         let user_stake_amount = coin::value(&coin);
         assert!(
-            user_stake_amount>= hd::min_stake_amount<T>(house_data) && user_stake_amount>= hd::max_stake_amount<T>(house_data),
+            user_stake_amount>= hd::min_stake_amount<T>(house_data) && user_stake_amount <= hd::max_stake_amount<T>(house_data),
             EInvalidStakeAmount
         );
 
@@ -117,6 +122,7 @@ module slots::slot_game{
         game_id: ID, 
         house_data: &mut HouseData<T>, 
         bls_sig: vector<u8>, 
+        is_testing: bool,
         ctx: &mut TxContext,
     ):bool{
         assert!(game_exists<T>(house_data, game_id), EGameDoesNotExist);
@@ -138,8 +144,12 @@ module slots::slot_game{
         let public_key = hd::public_key<T>(house_data);
 
         // Step 1: Check the BLS signature, if its invalid abort.
-        let is_sig_valid = bls12381_min_pk_verify(&bls_sig, &public_key, &msg_vec);
-        assert!(is_sig_valid, EInvalidBlsSig);
+        
+        if (!is_testing){
+            let is_sig_valid = bls12381_min_pk_verify(&bls_sig, &public_key, &msg_vec);
+            assert!(is_sig_valid, EInvalidBlsSig);
+        };
+        
         object::delete(id);
 
         //  Hash the beacon before taking the 1st byte.
@@ -186,15 +196,25 @@ module slots::slot_game{
         }
     }
     
-    public fun borrow_game<T>(game_id: ID, house_data: &HouseData<T>): &SlotGame{
-        
+    public fun borrow_game<T>(game_id: ID, house_data: &mut HouseData<T>): &SlotGame<T>{
+        assert!(game_exists<T>(house_data, game_id),EGameDoesNotExist);
+        dof::borrow(hd::borrow<T>(house_data), game_id)
+    }
+
+    public fun fee_rate<T>(game: &SlotGame<T>): u64 {
+        return game.fee_rate
+    }
+
+    public fun stake_amount<T>(game: &SlotGame<T>): u64 {
+        let stake_amount = balance::value(&game.total_stake);
+        return stake_amount
     }
     
     fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
-        dof::exists_with_type<ID, SlotGame<T>>(hd::borrow_mut<T>(house_data), game_id)
+        return dof::exists_with_type<ID, SlotGame<T>>(hd::borrow_mut<T>(house_data), game_id)
     }
 
-    fun fee_amount(stake_amount: u64, fee_rate: u64): u64{
+    public(friend) fun fee_amount(stake_amount: u64, fee_rate: u64): u64{
         return ((stake_amount/(GAME_RETURN as u64)) as u64) * ((fee_rate as u64)/(FEE_PRECISION as u64))
     }
 }

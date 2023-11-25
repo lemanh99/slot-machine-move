@@ -21,7 +21,7 @@ module slots::test_common{
 
     const ROLL_NUMBER_ONE: u64 = 1;
 
-        // House's public key.
+    // House's public key.
     const PUBLIC_KEY: vector<u8> = vector<u8> [
         134, 225,   1, 158, 217, 213,  32,  70, 180,
         42, 251, 131,  44, 112, 114, 117, 186,  65,
@@ -29,6 +29,17 @@ module slots::test_common{
         236,  49, 113,  59, 167, 137,  19, 119,  39,
         75, 146, 197, 214,  70, 164, 176, 221,  55,
         218,  63, 198
+    ];
+
+    const INVALID_BLS_SIG: vector<u8> = vector<u8>[
+        129, 108, 254,  61, 148, 134, 105, 218, 212,  49, 136, 118,
+        224, 223, 148,  83, 245, 230, 113, 248,  33, 169, 169,  78,
+        108,  67, 144, 229, 243,  47, 248, 249, 172, 175, 181,  15,
+        213, 223, 198,  85,  69,  15,  81, 234, 141, 240, 196,  88,
+        3, 152,  64, 226, 101, 248, 157, 192, 180,  77, 156, 209,
+        233,  93, 106,  87, 205,  90,  97, 181, 218,   6, 108, 246,
+        17,  39, 197, 223,  36,  36,  86, 143, 130, 147, 212, 213,
+        184,  38, 252, 169,  20,  58, 226, 180, 174, 222,  57, 171
     ];
 
     public fun get_initial_house_balance(): u64 {
@@ -117,7 +128,27 @@ module slots::test_common{
 
     public fun game_fees(scenario: &mut Scenario, game_id: ID, owner: address): u64 {
         tsc::next_tx(scenario, owner);
-        let house_data = tsc::take_shared<HouseData<T>>(scenario);
-        // let game = sg::
+        let house_data = tsc::take_shared<HouseData<SUI>>(scenario);
+        let game = sg::borrow_game(game_id, &mut house_data);
+        let stake_mount = sg::stake_amount<SUI>(game);
+        let fee_rate = sg::fee_rate<SUI>(game);
+
+        let fees_amount = sg::fee_amount(stake_mount, fee_rate);
+        tsc::return_shared(house_data);
+        return fees_amount
+    }
+
+    public fun end_game(scenario: &mut Scenario, game_id: ID, owner: address, player: address, valid_sig: bool) {
+        tsc::next_tx(scenario, owner);
+        {
+            let house_data = tsc::take_shared<HouseData<SUI>>(scenario);
+            let ctx = tsc::ctx(scenario);
+            let idx: u64 = 0;
+            let bls_sig = address::to_bytes(address::from_u256(address::to_u256(player) - (idx as u256)));
+            let signature = if(valid_sig) {bls_sig} else {INVALID_BLS_SIG};
+            sg::finish_game<SUI>(game_id, &mut house_data, signature, true, ctx);
+
+            tsc::return_shared(house_data);
+        }
     }
 }

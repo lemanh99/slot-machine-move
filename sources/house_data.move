@@ -137,6 +137,10 @@ module slots::house_data{
         return &mut house_data.id
     }
 
+    public(friend) fun borrow<T>(house_data: &HouseData<T>): &UID {
+        return &house_data.id
+    }
+
     
     public fun house_address<T>(house_data: &HouseData<T>): address {
         return house_data.house_address
