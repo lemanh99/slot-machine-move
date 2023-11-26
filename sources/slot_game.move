@@ -34,6 +34,7 @@ module slots::slot_game{
     struct SlotGame<phantom T> has key, store {
         id: UID,
         player: address,
+        start_epoch: u64,
         total_stake: Balance<T>,
         fee_rate: u64,
         result_roll_one: u64,
@@ -96,6 +97,7 @@ module slots::slot_game{
         let game = SlotGame<T>{
             id: game_uid,
             player,
+            start_epoch: tx_context::epoch(ctx),
             total_stake: user_balance_stake,
             fee_rate: hd::fee_rate<T>(house_data),
             result_roll_one,
@@ -129,6 +131,7 @@ module slots::slot_game{
         let SlotGame {
             id,
             player,
+            start_epoch,
             total_stake,
             result_roll_one,
             result_roll_two,
@@ -170,27 +173,25 @@ module slots::slot_game{
         player_won
     }
 
-    public fun reward_distribution<T>(
-        house_data: &mut HouseData<T>, 
-        is_player_won: bool, 
-        fee_rate: u64,
-        total_stake: Balance<T>, 
-        player: address,
-        ctx: &mut TxContext
-    ){
-        let stake_amount = balance::value(&total_stake);
-
-        if(is_player_won){
-            let fee_amount = fee_amount(stake_amount, fee_rate);
-            let fees = balance::split(&mut total_stake, fee_amount);
-            events::emit_fee_collection<T>(fee_amount);
-            balance::join(hd::borrow_fees_mut<T>(house_data), fees);
-            let reward = coin::from_balance(total_stake, ctx);
-            transfer::public_transfer(reward, player);
-        }else{
-            balance::join(hd::borrow_balance_mut<T>(house_data), total_stake);
-        }
-    }
+    // public fun cancel_game(
+    //     house_data: &mut HouseData,
+    //     game_id: ID,
+    //     ctx: &mut TxContext
+    // ){
+    //     assert!(game_exists<T>(house_data, game_id), EGameDoesNotExist);
+    //     let house_id = hd::borrow_mut<T>(house_data);
+    //     let game = dof::remove<ID, SlotGame<T>>(house_id, game_id);
+    //     let SlotGame {
+    //         id,
+    //         player,
+    //         total_stake,
+    //         result_roll_one,
+    //         result_roll_two,
+    //         result_roll_three,
+    //         fee_rate,
+    //         seed
+    //     } = game;
+    // }
     
     public fun borrow_game<T>(game_id: ID, house_data: &mut HouseData<T>): &SlotGame<T>{
         assert!(game_exists<T>(house_data, game_id),EGameDoesNotExist);
@@ -212,5 +213,27 @@ module slots::slot_game{
     
     fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
         return dof::exists_with_type<ID, SlotGame<T>>(hd::borrow_mut<T>(house_data), game_id)
+    }
+
+    fun reward_distribution<T>(
+        house_data: &mut HouseData<T>, 
+        is_player_won: bool, 
+        fee_rate: u64,
+        total_stake: Balance<T>, 
+        player: address,
+        ctx: &mut TxContext
+    ){
+        let stake_amount = balance::value(&total_stake);
+
+        if(is_player_won){
+            let fee_amount = fee_amount(stake_amount, fee_rate);
+            let fees = balance::split(&mut total_stake, fee_amount);
+            events::emit_fee_collection<T>(fee_amount);
+            balance::join(hd::borrow_fees_mut<T>(house_data), fees);
+            let reward = coin::from_balance(total_stake, ctx);
+            transfer::public_transfer(reward, player);
+        }else{
+            balance::join(hd::borrow_balance_mut<T>(house_data), total_stake);
+        }
     }
 }
