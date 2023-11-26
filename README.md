@@ -48,15 +48,6 @@ Follow these steps to set up the project on your local machine:
    ```bash
    git clone https://github.com/lemanh99/slot-machine-move.git
     ```
-## Setup
-
-Follow these steps to set up the project on your local machine:
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/your-username/project-name.git
-   ```
 
 2. Install Sui to build the project.
 3. Install dependencies:
