@@ -164,4 +164,15 @@ module slots::test_common{
             tsc::return_shared(house_data);
         }
     }
+
+    public fun advance_epochs(scenario: &mut Scenario, sender: address, epochs: u64){
+        tsc::next_tx(scenario, sender);
+        {
+            let number_epoch=0;
+            while(number_epoch < epochs){
+                tsc::next_epoch(scenario, sender);
+                number_epoch = number_epoch + 1;
+            }
+        }
+    }
 }

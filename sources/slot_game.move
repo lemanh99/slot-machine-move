@@ -24,10 +24,16 @@ module slots::slot_game{
     const EBalanceNotEnough: u64 = 3;
     const EGameDoesNotExist: u64 = 4;
     const EPoolNotEnough: u64 = 5;
+    const ECanNotChallengeYet: u64 = 3;
 
     // -----------
     const GAME_RETURN: u8 = 2;
     const FEE_PRECISION: u128 = 100;
+    const EPOCHS_CANCEL_AFTER: u64 = 7;
+
+    const PLAYER_WON_STATE: u8 = 1;
+    const HOUSE_WON_STATE: u8 = 2;
+    const CHALLENGED_STATE: u8 = 3;
 
     // --------------- Objects ---------------
 
@@ -173,25 +179,39 @@ module slots::slot_game{
         player_won
     }
 
-    // public fun cancel_game(
-    //     house_data: &mut HouseData,
-    //     game_id: ID,
-    //     ctx: &mut TxContext
-    // ){
-    //     assert!(game_exists<T>(house_data, game_id), EGameDoesNotExist);
-    //     let house_id = hd::borrow_mut<T>(house_data);
-    //     let game = dof::remove<ID, SlotGame<T>>(house_id, game_id);
-    //     let SlotGame {
-    //         id,
-    //         player,
-    //         total_stake,
-    //         result_roll_one,
-    //         result_roll_two,
-    //         result_roll_three,
-    //         fee_rate,
-    //         seed
-    //     } = game;
-    // }
+    public fun challenge<T>(
+        house_data: &mut HouseData<T>,
+        game_id: ID,
+        ctx: &mut TxContext
+    ){
+        assert!(game_exists<T>(house_data, game_id), EGameDoesNotExist);
+        let current_epoch = tx_context::epoch(ctx);
+        let house_id = hd::borrow_mut<T>(house_data);
+        let game = dof::remove<ID, SlotGame<T>>(house_id, game_id);
+        let SlotGame {
+            id,
+            player,
+            start_epoch,
+            total_stake,
+            result_roll_one,
+            result_roll_two,
+            result_roll_three,
+            fee_rate,
+            seed
+        } = game;
+        assert!(current_epoch >= start_epoch + EPOCHS_CANCEL_AFTER, ECanNotChallengeYet);
+        let origin_stake_amount = balance::value(&total_stake) / 2;
+        transfer::public_transfer(coin::from_balance(total_stake, ctx), player);
+
+        object::delete(id);
+        events::emit_result<T>(
+            game_id,
+            player,
+            true,
+            origin_stake_amount,
+            CHALLENGED_STATE
+        )
+    }
     
     public fun borrow_game<T>(game_id: ID, house_data: &mut HouseData<T>): &SlotGame<T>{
         assert!(game_exists<T>(house_data, game_id),EGameDoesNotExist);

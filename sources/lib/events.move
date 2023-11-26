@@ -68,4 +68,28 @@ module slots::events {
             amount
         })
     }
+
+    struct Outcome<phantom T> has copy, store, drop{
+        game_id: ID,
+        player: address,
+        player_won: bool,
+        stake_amount: u64,
+        status: u8,
+    }
+
+    public(friend) fun emit_result<T>(
+        game_id: ID,
+        player: address,
+        player_won: bool,
+        stake_amount: u64,
+        status: u8
+    ){
+        emit(Outcome<T>{
+            game_id,
+            player,
+            player_won,
+            stake_amount,
+            status,
+        })
+    }
 }
