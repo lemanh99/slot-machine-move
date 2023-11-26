@@ -29,9 +29,6 @@ module slots::slot_game{
     const GAME_RETURN: u8 = 2;
     const FEE_PRECISION: u128 = 100;
 
-    //--------------------------------------------------------
-    friend slots::test_common;
-
     // --------------- Objects ---------------
 
     struct SlotGame<phantom T> has key, store {
@@ -208,12 +205,12 @@ module slots::slot_game{
         let stake_amount = balance::value(&game.total_stake);
         return stake_amount
     }
+
+    public fun fee_amount(stake_amount: u64, fee_rate: u64): u64{
+        return ((stake_amount/(GAME_RETURN as u64)) as u64) * ((fee_rate as u64)/(FEE_PRECISION as u64))
+    }
     
     fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
         return dof::exists_with_type<ID, SlotGame<T>>(hd::borrow_mut<T>(house_data), game_id)
-    }
-
-    public(friend) fun fee_amount(stake_amount: u64, fee_rate: u64): u64{
-        return ((stake_amount/(GAME_RETURN as u64)) as u64) * ((fee_rate as u64)/(FEE_PRECISION as u64))
     }
 }
