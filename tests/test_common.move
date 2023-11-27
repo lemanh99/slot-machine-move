@@ -2,8 +2,9 @@
 module slots::test_common{
     // use std::string::{Self};
     use std::debug;
-    use sui::address;
+    use std::vector;
 
+    use sui::address;
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
     use sui::transfer;
@@ -20,10 +21,10 @@ module slots::test_common{
     const INITIAL_HOUSE_BALANCE: u64 = 5_000_000_000; // 1 SUI
     const INITIAL_PLAYER_BALANCE: u64 = 3_000_000_000; // 3 SUI
 
-    const ROLL_NUMBER_ZERO: u64 = 0;
-    const ROLL_NUMBER_ONE: u64 = 1;
-    const ROLL_NUMBER_TWO: u64 = 2;
-    const ROLL_NUMBER_THREE: u64 = 3;
+    const ROLL_NUMBER_ZERO: u8 = 0;
+    const ROLL_NUMBER_ONE: u8 = 1;
+    const ROLL_NUMBER_TWO: u8 = 2;
+    const ROLL_NUMBER_THREE: u8 = 3;
 
     // House's public key.
     const PUBLIC_KEY: vector<u8> = vector<u8> [
@@ -124,11 +125,12 @@ module slots::test_common{
         let result_roll_one = if (player_won){ROLL_NUMBER_ZERO} else {ROLL_NUMBER_ONE};
         let result_roll_two = if (player_won){ROLL_NUMBER_ONE} else {ROLL_NUMBER_TWO};
         let result_roll_three = if (player_won){ROLL_NUMBER_ONE} else {ROLL_NUMBER_THREE};
-
+        let roll_guess = vector::empty<u8>();
+        vector::push_back(&mut roll_guess, result_roll_one);
+        vector::push_back(&mut roll_guess, result_roll_two);
+        vector::push_back(&mut roll_guess, result_roll_three);
         let game_id = sg::new_game<SUI>(
-            result_roll_one,
-            result_roll_two,
-            result_roll_three,
+            roll_guess,
             seed,
             &mut house_data,
             stake_coin,

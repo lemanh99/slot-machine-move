@@ -43,27 +43,20 @@ module slots::slot_game{
         start_epoch: u64,
         total_stake: Balance<T>,
         fee_rate: u64,
-        result_roll_one: u64,
-        result_roll_two: u64,
-        result_roll_three: u64,
+        roll_guess: vector<u8>,
         seed: vector<u8>,
     }
 
     // Only a house can create games currently to ensure that we cannot be hacked
     public fun start_game<T> (
-        result_roll_one: u64,
-        result_roll_two: u64,
-        result_roll_three: u64,
+        roll_guess: vector<u8>,
         seed: vector<u8>,
         house_data: &mut HouseData<T>,
         coin: Coin<T>,
         ctx: &mut TxContext
     ): ID {
-        let fee_rate = hd::fee_rate<T>(house_data);
         let game_id = new_game<T>(
-            result_roll_one,
-            result_roll_two,
-            result_roll_three,
+            roll_guess,
             seed,
             house_data,
             coin,
@@ -73,15 +66,13 @@ module slots::slot_game{
     }
 
     public fun new_game<T>(
-        result_roll_one: u64,
-        result_roll_two: u64,
-        result_roll_three: u64,
+        roll_guess: vector<u8>,
         seed: vector<u8>,
         house_data: &mut HouseData<T>,
         coin: Coin<T>,
         ctx: &mut TxContext
     ): ID {
-        roll::validate_roll_players(result_roll_one, result_roll_two, result_roll_three);
+        roll::validate_roll_players(roll_guess);
         let user_stake_amount = coin::value(&coin);
         assert!(
             user_stake_amount>= hd::min_stake_amount<T>(house_data) && user_stake_amount <= hd::max_stake_amount<T>(house_data),
@@ -106,9 +97,7 @@ module slots::slot_game{
             start_epoch: tx_context::epoch(ctx),
             total_stake: user_balance_stake,
             fee_rate: hd::fee_rate<T>(house_data),
-            result_roll_one,
-            result_roll_two,
-            result_roll_three,
+            roll_guess,
             seed
         };
 
@@ -116,9 +105,7 @@ module slots::slot_game{
             game_id,
             player,
             user_stake_amount,
-            result_roll_one,
-            result_roll_two,
-            result_roll_three
+            roll_guess
         );
         dof::add(hd::borrow_mut<T>(house_data), game_id, game);
         return game_id //return game id
@@ -139,10 +126,8 @@ module slots::slot_game{
             player,
             start_epoch,
             total_stake,
-            result_roll_one,
-            result_roll_two,
-            result_roll_three,
             fee_rate,
+            roll_guess,
             seed
         } = game;
         
@@ -160,11 +145,7 @@ module slots::slot_game{
         object::delete(id);
 
         //  Hash the beacon before taking the 1st byte.
-        let (is_player_won, multiple_number) = roll::roll_player(
-            result_roll_one,
-            result_roll_two,
-            result_roll_three
-        );
+        let (is_player_won, multiple_number) = roll::roll_player(roll_guess);
         let hashed_beacon = blake2b256(&bls_sig);
         let first_byte = *vector::borrow(&hashed_beacon, 0);
         let player_won: bool = (is_player_won == first_byte % 2);
@@ -193,10 +174,8 @@ module slots::slot_game{
             player,
             start_epoch,
             total_stake,
-            result_roll_one,
-            result_roll_two,
-            result_roll_three,
             fee_rate,
+            roll_guess,
             seed
         } = game;
         assert!(current_epoch >= start_epoch + EPOCHS_CANCEL_AFTER, ECanNotChallengeYet);

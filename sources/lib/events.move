@@ -36,26 +36,20 @@ module slots::events {
         game_id: ID,
         player: address,
         user_stake: u64,
-        result_roll_one: u64,
-        result_roll_two: u64,
-        result_roll_three: u64,
+        roll_guess: vector<u8>,
     }
 
     public(friend) fun emit_create_game<T>(
         game_id: ID,
         player: address,
         user_stake: u64,
-        result_roll_one: u64,
-        result_roll_two: u64,
-        result_roll_three: u64
+        roll_guess: vector<u8>,
     ){
         emit(GameCreated<T>{
             game_id,
             player,
             user_stake,
-            result_roll_one,
-            result_roll_two,
-            result_roll_three
+            roll_guess
         })
     }
 
