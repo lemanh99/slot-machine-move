@@ -20,11 +20,12 @@ module slots::slot_game{
     // Error code
 
     const EInvalidStakeAmount: u64 = 0;
-    const EInvalidBlsSig: u64 = 2;
-    const EBalanceNotEnough: u64 = 3;
-    const EGameDoesNotExist: u64 = 4;
-    const EPoolNotEnough: u64 = 5;
-    const ECanNotChallengeYet: u64 = 3;
+    const EInvalidBlsSig: u64 = 1;
+    const EBalanceNotEnough: u64 = 2;
+    const EGameDoesNotExist: u64 = 3;
+    const EPoolNotEnough: u64 = 4;
+    const ECanNotChallengeYet: u64 = 5;
+    const EBatchFinishGameInvalidInputs: u64 = 6;
 
     // -----------
     const GAME_RETURN: u8 = 2;
@@ -159,6 +160,23 @@ module slots::slot_game{
             ctx
         );
         player_won
+    }
+
+    public entry fun batch_finish_game<T>(
+        game_ids: vector<ID>, 
+        house_data: &mut HouseData<T>, 
+        bls_sigs: vector<vector<u8>>, 
+        is_testing: bool,
+        ctx: &mut TxContext,
+    ){
+        assert!(vector::length(&game_ids) == vector::length(&bls_sigs), EBatchFinishGameInvalidInputs);
+        while(!vector::is_empty(&game_ids)) {
+            let game_id = vector::pop_back(&mut game_ids);
+            let bls_sig = vector::pop_back(&mut bls_sigs);
+            if(game_exists(house_data, game_id)){
+                finish_game<T>(game_id, house_data, bls_sig, is_testing, ctx);
+            };
+        };
     }
 
     public fun challenge<T>(

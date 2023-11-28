@@ -2,7 +2,10 @@ module slots::roll{
     use std::vector;
     use std::debug;
     // Error
-    const EInvalidResultNumber: u64 = 1;
+    const EInvalidResultNumber: u64 = 0;
+    const EInvalidLengthRollNumber: u64 = 1;
+
+    const LENGHT_ROLL_NUMBER: u64=3;
 
     //Roll number players
     const DEFAULT_MIN_RESULT_ROLL: u8=0;
@@ -29,6 +32,7 @@ module slots::roll{
     public(friend) fun validate_roll_players(
         roll_guess: vector<u8>,
     ): (u8, u8, u8){
+        assert!(vector::length(&roll_guess) == LENGHT_ROLL_NUMBER, EInvalidLengthRollNumber);
         let result_roll_one= vector::pop_back(&mut roll_guess);
         let result_roll_two= vector::pop_back(&mut roll_guess);
         let result_roll_three= vector::pop_back(&mut roll_guess);
