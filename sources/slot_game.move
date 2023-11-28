@@ -20,11 +20,12 @@ module slots::slot_game{
     // Error code
 
     const EInvalidStakeAmount: u64 = 0;
-    const EInvalidBlsSig: u64 = 2;
-    const EBalanceNotEnough: u64 = 3;
-    const EGameDoesNotExist: u64 = 4;
-    const EPoolNotEnough: u64 = 5;
-    const ECanNotChallengeYet: u64 = 3;
+    const EInvalidBlsSig: u64 = 1;
+    const EBalanceNotEnough: u64 = 2;
+    const EGameDoesNotExist: u64 = 3;
+    const EPoolNotEnough: u64 = 4;
+    const ECanNotChallengeYet: u64 = 5;
+    const EBatchFinishGameInvalidInputs: u64 = 6;
 
     // -----------
     const GAME_RETURN: u8 = 2;
@@ -43,27 +44,20 @@ module slots::slot_game{
         start_epoch: u64,
         total_stake: Balance<T>,
         fee_rate: u64,
-        result_roll_one: u64,
-        result_roll_two: u64,
-        result_roll_three: u64,
+        roll_guess: vector<u8>,
         seed: vector<u8>,
     }
 
     // Only a house can create games currently to ensure that we cannot be hacked
     public fun start_game<T> (
-        result_roll_one: u64,
-        result_roll_two: u64,
-        result_roll_three: u64,
+        roll_guess: vector<u8>,
         seed: vector<u8>,
         house_data: &mut HouseData<T>,
         coin: Coin<T>,
         ctx: &mut TxContext
     ): ID {
-        let fee_rate = hd::fee_rate<T>(house_data);
         let game_id = new_game<T>(
-            result_roll_one,
-            result_roll_two,
-            result_roll_three,
+            roll_guess,
             seed,
             house_data,
             coin,
@@ -73,15 +67,13 @@ module slots::slot_game{
     }
 
     public fun new_game<T>(
-        result_roll_one: u64,
-        result_roll_two: u64,
-        result_roll_three: u64,
+        roll_guess: vector<u8>,
         seed: vector<u8>,
         house_data: &mut HouseData<T>,
         coin: Coin<T>,
         ctx: &mut TxContext
     ): ID {
-        roll::validate_roll_players(result_roll_one, result_roll_two, result_roll_three);
+        roll::validate_roll_players(roll_guess);
         let user_stake_amount = coin::value(&coin);
         assert!(
             user_stake_amount>= hd::min_stake_amount<T>(house_data) && user_stake_amount <= hd::max_stake_amount<T>(house_data),
@@ -106,9 +98,7 @@ module slots::slot_game{
             start_epoch: tx_context::epoch(ctx),
             total_stake: user_balance_stake,
             fee_rate: hd::fee_rate<T>(house_data),
-            result_roll_one,
-            result_roll_two,
-            result_roll_three,
+            roll_guess,
             seed
         };
 
@@ -116,9 +106,7 @@ module slots::slot_game{
             game_id,
             player,
             user_stake_amount,
-            result_roll_one,
-            result_roll_two,
-            result_roll_three
+            roll_guess
         );
         dof::add(hd::borrow_mut<T>(house_data), game_id, game);
         return game_id //return game id
@@ -139,10 +127,8 @@ module slots::slot_game{
             player,
             start_epoch,
             total_stake,
-            result_roll_one,
-            result_roll_two,
-            result_roll_three,
             fee_rate,
+            roll_guess,
             seed
         } = game;
         
@@ -160,11 +146,7 @@ module slots::slot_game{
         object::delete(id);
 
         //  Hash the beacon before taking the 1st byte.
-        let (is_player_won, multiple_number) = roll::roll_player(
-            result_roll_one,
-            result_roll_two,
-            result_roll_three
-        );
+        let (is_player_won, multiple_number) = roll::roll_player(roll_guess);
         let hashed_beacon = blake2b256(&bls_sig);
         let first_byte = *vector::borrow(&hashed_beacon, 0);
         let player_won: bool = (is_player_won == first_byte % 2);
@@ -174,9 +156,27 @@ module slots::slot_game{
             fee_rate,
             total_stake,
             player,
+            multiple_number,
             ctx
         );
         player_won
+    }
+
+    public entry fun batch_finish_game<T>(
+        game_ids: vector<ID>, 
+        house_data: &mut HouseData<T>, 
+        bls_sigs: vector<vector<u8>>, 
+        is_testing: bool,
+        ctx: &mut TxContext,
+    ){
+        assert!(vector::length(&game_ids) == vector::length(&bls_sigs), EBatchFinishGameInvalidInputs);
+        while(!vector::is_empty(&game_ids)) {
+            let game_id = vector::pop_back(&mut game_ids);
+            let bls_sig = vector::pop_back(&mut bls_sigs);
+            if(game_exists(house_data, game_id)){
+                finish_game<T>(game_id, house_data, bls_sig, is_testing, ctx);
+            };
+        };
     }
 
     public fun challenge<T>(
@@ -193,10 +193,8 @@ module slots::slot_game{
             player,
             start_epoch,
             total_stake,
-            result_roll_one,
-            result_roll_two,
-            result_roll_three,
             fee_rate,
+            roll_guess,
             seed
         } = game;
         assert!(current_epoch >= start_epoch + EPOCHS_CANCEL_AFTER, ECanNotChallengeYet);
@@ -222,13 +220,18 @@ module slots::slot_game{
         return game.fee_rate
     }
 
+    public fun roll_guess<T>(game: &SlotGame<T>): vector<u8> {
+        return game.roll_guess
+    }
+
+
     public fun stake_amount<T>(game: &SlotGame<T>): u64 {
         let stake_amount = balance::value(&game.total_stake);
         return stake_amount
     }
 
-    public fun fee_amount(stake_amount: u64, fee_rate: u64): u64{
-        return ((stake_amount/(GAME_RETURN as u64)) as u64) * ((fee_rate as u64)/(FEE_PRECISION as u64))
+    public fun fee_amount(stake_amount: u64, fee_rate: u64, multiple_number: u8): u64{
+        return (((stake_amount/(GAME_RETURN as u64)) as u64) * (multiple_number as u64 ) * (fee_rate as u64))/(FEE_PRECISION as u64)
     }
     
     fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
@@ -241,12 +244,13 @@ module slots::slot_game{
         fee_rate: u64,
         total_stake: Balance<T>, 
         player: address,
+        multiple_number: u8,
         ctx: &mut TxContext
     ){
         let stake_amount = balance::value(&total_stake);
 
         if(is_player_won){
-            let fee_amount = fee_amount(stake_amount, fee_rate);
+            let fee_amount = fee_amount(stake_amount, fee_rate, multiple_number);
             let fees = balance::split(&mut total_stake, fee_amount);
             events::emit_fee_collection<T>(fee_amount);
             balance::join(hd::borrow_fees_mut<T>(house_data), fees);
