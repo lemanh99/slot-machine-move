@@ -155,6 +155,7 @@ module slots::slot_game{
             fee_rate,
             total_stake,
             player,
+            multiple_number,
             ctx
         );
         player_won
@@ -201,13 +202,18 @@ module slots::slot_game{
         return game.fee_rate
     }
 
+    public fun roll_guess<T>(game: &SlotGame<T>): vector<u8> {
+        return game.roll_guess
+    }
+
+
     public fun stake_amount<T>(game: &SlotGame<T>): u64 {
         let stake_amount = balance::value(&game.total_stake);
         return stake_amount
     }
 
-    public fun fee_amount(stake_amount: u64, fee_rate: u64): u64{
-        return ((stake_amount/(GAME_RETURN as u64)) as u64) * ((fee_rate as u64)/(FEE_PRECISION as u64))
+    public fun fee_amount(stake_amount: u64, fee_rate: u64, multiple_number: u8): u64{
+        return (((stake_amount/(GAME_RETURN as u64)) as u64) * (multiple_number as u64 ) * (fee_rate as u64))/(FEE_PRECISION as u64)
     }
     
     fun game_exists<T>(house_data: &mut HouseData<T>, game_id: ID): bool {
@@ -220,12 +226,13 @@ module slots::slot_game{
         fee_rate: u64,
         total_stake: Balance<T>, 
         player: address,
+        multiple_number: u8,
         ctx: &mut TxContext
     ){
         let stake_amount = balance::value(&total_stake);
 
         if(is_player_won){
-            let fee_amount = fee_amount(stake_amount, fee_rate);
+            let fee_amount = fee_amount(stake_amount, fee_rate, multiple_number);
             let fees = balance::split(&mut total_stake, fee_amount);
             events::emit_fee_collection<T>(fee_amount);
             balance::join(hd::borrow_fees_mut<T>(house_data), fees);

@@ -13,12 +13,12 @@ module slots::roll{
     const PLAYER_LOSE: u8=0;
     const PLAYER_WON: u8=1;
     
-    const MULTIPLIER_ZERO: u64=0;
-    const MULTIPLIER_ONE: u64=1;
+    const MULTIPLIER_ZERO: u8=0;
+    const MULTIPLIER_ONE: u8=1;
     // const MULTIPLIER_TWO: u64=2;
-    const MULTIPLIER_THREE: u64=3;
-    const MULTIPLIER_FIVE: u64=5;
-    const MULTIPLIER_EIGHT: u64=8;
+    const MULTIPLIER_THREE: u8=3;
+    const MULTIPLIER_FIVE: u8=5;
+    const MULTIPLIER_EIGHT: u8=8;
 
     const NUMBER_THREE: u8=3;
     const NUMBER_FIVE: u8=5;
@@ -38,9 +38,9 @@ module slots::roll{
         return (result_roll_one, result_roll_two, result_roll_three)
     }
 
-    public(friend) fun roll_player(
+    public fun roll_player(
         roll_guess: vector<u8>,
-    ): (u8, u64) {
+    ): (u8, u8) {
         let (result_roll_one, result_roll_two, result_roll_three) = validate_roll_players(roll_guess);
 
         if(result_roll_one == result_roll_two && result_roll_three==DEFAULT_ROLL_NUMBER_QUEEN){

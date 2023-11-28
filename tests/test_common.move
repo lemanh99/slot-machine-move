@@ -10,10 +10,10 @@ module slots::test_common{
     use sui::transfer;
     use sui::test_scenario::{Self as tsc, Scenario};
     use sui::object::ID;
-    use sui::test_random::{Self, Random};
 
     use slots::house_data::{Self as hd, HouseCap, HouseData};
     use slots::slot_game::{Self as sg};
+    use slots::roll;
 
     const MIN_STAKE: u64 = 1_000_000_000; // 1 SUI
     // const MAX_STAKE: u64 = 50_000_000_000; // 50 SUI
@@ -147,8 +147,8 @@ module slots::test_common{
         let game = sg::borrow_game(game_id, &mut house_data);
         let stake_mount = sg::stake_amount<SUI>(game);
         let fee_rate = sg::fee_rate<SUI>(game);
-
-        let fees_amount = sg::fee_amount(stake_mount, fee_rate);
+        let (_, multiple_number) = roll::roll_player(sg::roll_guess<SUI>(game));
+        let fees_amount = sg::fee_amount(stake_mount, fee_rate, multiple_number);
         tsc::return_shared(house_data);
         return fees_amount
     }
