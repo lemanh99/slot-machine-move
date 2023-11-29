@@ -64,7 +64,7 @@ module slots::test_house_data {
         tc::init_house(scenario, owner, true);
         let game_id = tc::create_game(scenario, player, tc::get_min_stake(), true);
         let game_fees = tc::game_fees(scenario, game_id, owner);
-
+        tc::submit_roll_guess(scenario, game_id, player);
         tc::end_game(scenario, game_id, owner, player, true);
 
         tsc::next_tx(scenario, owner);
