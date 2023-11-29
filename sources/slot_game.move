@@ -26,6 +26,8 @@ module slots::slot_game{
     const EPoolNotEnough: u64 = 4;
     const ECanNotChallengeYet: u64 = 5;
     const EBatchFinishGameInvalidInputs: u64 = 6;
+    const EInvalidState: u64 = 7;
+    const ECallerNotGamePlayer: u64 = 8;
 
     // -----------
     const GAME_RETURN: u8 = 2;
@@ -35,6 +37,8 @@ module slots::slot_game{
     const PLAYER_WON_STATE: u8 = 1;
     const HOUSE_WON_STATE: u8 = 2;
     const CHALLENGED_STATE: u8 = 3;
+    const FUNDS_SUBMITTED_STATE: u8 = 4;
+    const GUESS_SUBMITTED_STATE: u8 = 5;
 
     // --------------- Objects ---------------
 
@@ -46,6 +50,7 @@ module slots::slot_game{
         fee_rate: u64,
         roll_guess: vector<u8>,
         seed: vector<u8>,
+        status: u8,
     }
 
     // Only a house can create games currently to ensure that we cannot be hacked
@@ -99,7 +104,8 @@ module slots::slot_game{
             total_stake: user_balance_stake,
             fee_rate: hd::fee_rate<T>(house_data),
             roll_guess,
-            seed
+            seed,
+            status: FUNDS_SUBMITTED_STATE
         };
 
         events::emit_create_game<T>(
@@ -111,6 +117,19 @@ module slots::slot_game{
         dof::add(hd::borrow_mut<T>(house_data), game_id, game);
         return game_id //return game id
     }
+
+    public entry fun summit_guess<T>(
+        game_id: ID, 
+        house_data: &mut HouseData<T>, 
+        ctx: &mut TxContext,
+    ){
+        assert!(game_exists<T>(house_data, game_id), EGameDoesNotExist);
+        let game = borrow_game(game_id, house_data);
+        assert!(game.status == FUNDS_SUBMITTED_STATE, EInvalidState);
+        assert!(tx_context::sender(ctx) == game.player, ECallerNotGamePlayer);
+        game.status = GUESS_SUBMITTED_STATE
+    }
+
 
     public entry fun finish_game<T>(
         game_id: ID, 
@@ -129,9 +148,12 @@ module slots::slot_game{
             total_stake,
             fee_rate,
             roll_guess,
-            seed
+            seed,
+            status
         } = game;
-        
+
+        assert!(status == GUESS_SUBMITTED_STATE, EInvalidState);
+
         let msg_vec = object::uid_to_bytes(&id);
         vector::append(&mut msg_vec, seed);
         let public_key = hd::public_key<T>(house_data);
@@ -195,7 +217,8 @@ module slots::slot_game{
             total_stake,
             fee_rate,
             roll_guess,
-            seed
+            seed,
+            status
         } = game;
         assert!(current_epoch >= start_epoch + EPOCHS_CANCEL_AFTER, ECanNotChallengeYet);
         let origin_stake_amount = balance::value(&total_stake) / 2;
@@ -211,9 +234,9 @@ module slots::slot_game{
         )
     }
     
-    public fun borrow_game<T>(game_id: ID, house_data: &mut HouseData<T>): &SlotGame<T>{
+    public fun borrow_game<T>(game_id: ID, house_data: &mut HouseData<T>): &mut SlotGame<T>{
         assert!(game_exists<T>(house_data, game_id),EGameDoesNotExist);
-        dof::borrow(hd::borrow<T>(house_data), game_id)
+        dof::borrow_mut(hd::borrow_mut<T>(house_data), game_id)
     }
 
     public fun fee_rate<T>(game: &SlotGame<T>): u64 {

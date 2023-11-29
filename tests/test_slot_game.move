@@ -32,6 +32,7 @@ module slots::test_slot_game{
         tc::init_house(scenario, owner, true);
         let game_id = tc::create_game(scenario, player, tc::get_min_stake(), false);
 
+        tc::submit_roll_guess(scenario, game_id, player);
         tc::end_game(scenario, game_id, owner, player, false);
 
         tsc::next_tx(scenario, player);
@@ -60,6 +61,7 @@ module slots::test_slot_game{
         let game_id = tc::create_game(scenario, player, tc::get_min_stake(), true);
         let game_fees = tc::game_fees(scenario, game_id, owner);
 
+        tc::submit_roll_guess(scenario, game_id, player);
         tc::end_game(scenario, game_id, owner, player, true);
         
 
@@ -90,6 +92,7 @@ module slots::test_slot_game{
         let game_id = tc::create_game(scenario, player, tc::get_min_stake(), true);
 
         tc::advance_epochs(scenario, player, EPOCHS_TO_CHALLENGE);
+        tc::submit_roll_guess(scenario, game_id, player);
 
         tsc::next_tx(scenario, player);
         {

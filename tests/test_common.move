@@ -153,6 +153,16 @@ module slots::test_common{
         return fees_amount
     }
 
+    public fun submit_roll_guess(scenario: &mut Scenario, game_id: ID, player: address){
+        tsc::next_tx(scenario, player);
+        {
+            let house_data = tsc::take_shared<HouseData<SUI>>(scenario);
+            let ctx = tsc::ctx(scenario);
+            sg::summit_guess<SUI>(game_id, &mut house_data, ctx);
+            tsc::return_shared(house_data);
+        }
+    }
+
     public fun end_game(scenario: &mut Scenario, game_id: ID, owner: address, player: address, valid_sig: bool) {
         tsc::next_tx(scenario, owner);
         {
