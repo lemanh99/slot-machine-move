@@ -76,7 +76,6 @@ module slots::test_common{
                 
                 hd::initialize_house_data(
                     house_cap, 
-                    owner, 
                     PUBLIC_KEY,
                     coin,
                     ctx
@@ -86,7 +85,6 @@ module slots::test_common{
                 let zero_coin = coin::zero<SUI>(ctx);
                 hd::initialize_house_data(
                     house_cap, 
-                    owner, 
                     PUBLIC_KEY,
                     zero_coin,
                     ctx

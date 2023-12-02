@@ -53,7 +53,6 @@ module slots::house_data{
     /// This object is involed in all games created by the same instance of this package.
     public fun initialize_house_data<T>(
         house_cap: HouseCap, 
-        house_address: address, 
         public_key: vector<u8>,
         coin: Coin<T>,
         ctx: &mut TxContext
@@ -62,7 +61,7 @@ module slots::house_data{
 
         let house_data = HouseData {
             id: object::new(ctx),
-            house_address,
+            house_address: tx_context::sender(ctx),
             public_key,
             balance: coin::into_balance(coin),
             fees: balance::zero(),

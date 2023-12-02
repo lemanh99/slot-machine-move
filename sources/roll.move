@@ -1,6 +1,5 @@
 module slots::roll{
     use std::vector;
-    use std::debug;
     // Error
     const EInvalidResultNumber: u64 = 0;
     const EInvalidLengthRollNumber: u64 = 1;
